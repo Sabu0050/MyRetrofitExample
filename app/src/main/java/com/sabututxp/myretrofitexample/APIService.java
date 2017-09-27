@@ -1,6 +1,7 @@
 package com.sabututxp.myretrofitexample;
 
-import com.sabututxp.myretrofitexample.model.RegSuccessResponse;
+
+import com.sabututxp.myretrofitexample.model.LoginResponse;
 import com.sabututxp.myretrofitexample.model.User;
 
 import retrofit2.Call;
@@ -22,4 +23,10 @@ public interface APIService {
             @Field("password") String password,
             @Field("phone_no") String phoneNumber,
             @Field("password_confirmation") String password_confirmation);
+    @FormUrlEncoded
+    @POST("login")
+    Call<LoginResponse> userLogin(
+            @Field("username") String email,
+            @Field("password") String password
+    );
 }

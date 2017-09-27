@@ -1,6 +1,8 @@
 package com.sabututxp.myretrofitexample.activities;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
+import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -8,11 +10,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.sabututxp.myretrofitexample.APIService;
 import com.sabututxp.myretrofitexample.APIUrl;
 import com.sabututxp.myretrofitexample.R;
 import com.sabututxp.myretrofitexample.model.User;
 
+
+import org.json.JSONObject;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -23,6 +29,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class SignUpActivity extends AppCompatActivity {
     private Button signUpButton;
     private EditText editTextName,editTextEmail,editTextPhoneNumber,editTextPassword,editTextConfirmPassword;
+    private APIService service;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +46,28 @@ public class SignUpActivity extends AppCompatActivity {
         signUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                userSignUp();
+                /*userSignUp();*/
+                if (userSignUp()) {
+
+
+                    CountDownTimer countDownTimer = new CountDownTimer(1000, 1000) {
+                        @Override
+                        public void onTick(long millisUntilFinished) {
+
+                        }
+
+                        @Override
+                        public void onFinish() {
+
+                            Toast.makeText(SignUpActivity.this, " Login using correct details ", Toast.LENGTH_SHORT).show();
+
+                            Intent intent = new Intent(SignUpActivity.this, SingInActivity.class);
+                            startActivity(intent);
+
+                        }
+                    }.start();
+
+                }
             }
         });
     }
@@ -47,7 +75,8 @@ public class SignUpActivity extends AppCompatActivity {
 
 
 
-    private void userSignUp() {
+
+    private boolean userSignUp() {
         //defining a progress dialog to show while signing up
         final ProgressDialog progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("Signing Up...");
@@ -59,42 +88,60 @@ public class SignUpActivity extends AppCompatActivity {
         String password = editTextPassword.getText().toString().trim();
         String confirmPassword = editTextConfirmPassword.getText().toString().trim();
 
-        //building retrofit object
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(APIUrl.BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
+        if (name.isEmpty() || email.isEmpty() || phoneNumber.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
 
-        //Defining retrofit api service
-        APIService service = retrofit.create(APIService.class);
+            Toast.makeText(this, "No Fields can be empty!! ", Toast.LENGTH_SHORT).show();
 
-        //Defining the user object as we need to pass it with the call
-        //final UserInfo auser = new UserInfo("akash", "akash.cse1088@gmail.com", "4234", "123456", "123456");
-      //  System.out.println(auser.getEmail());
+        } else if (!password.equals(confirmPassword) && (!password.isEmpty() || !confirmPassword.isEmpty())) {
 
-        //defining the call
+
+            Toast.makeText(this, "Passwords Do not match", Toast.LENGTH_SHORT).show();
+
+
+        } else {
+
+
+            return serverOperation(name, email, password, phoneNumber, confirmPassword);
+
+        }
+
+        return false;
+
+
+    }
+
+    private boolean serverOperation(String name, String email, String phoneNumber, String password, String confirmPassword){
+
         Call<User> call = service.createUser(name,email,password,phoneNumber,confirmPassword);
         //calling the api
         call.enqueue(new Callback<User>() {
             @Override
             public void onResponse(Call<User> call, Response<User> response) {
-
-                //System.out.println(response.body().toString());
-                System.out.println(response.body().getEmail().toString());
                 if(response.isSuccessful()){
-                    Toast.makeText(getApplicationContext(),"User Register Successfully",Toast.LENGTH_SHORT).show();
-
+                    String email = response.body().getEmail();
+                    Toast.makeText(SignUpActivity.this, email + " has been registered, \n please check email to verify account ", Toast.LENGTH_LONG).show();
+                    Intent intent = new Intent(SignUpActivity.this, SingInActivity.class);
+                    startActivity(intent);
                 }
 
                 else{
-                    Toast.makeText(getApplicationContext(),"404 Not found",Toast.LENGTH_SHORT).show();
+                    Gson gson = new GsonBuilder().create();
+                    Error pojo;
+                    try {
+                        JSONObject errorObj = new JSONObject(response.errorBody().string());
+                        pojo = gson.fromJson(errorObj.getJSONObject("error").toString(), Error.class);
+                        Toast.makeText(getApplicationContext(), pojo.toString(), Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
                 }
             }
 
             @Override
             public void onFailure(Call<User> call, Throwable t) {
-                System.out.println("eerrr");
+                Toast.makeText(SignUpActivity.this, t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
+    return false;
     }
 }
